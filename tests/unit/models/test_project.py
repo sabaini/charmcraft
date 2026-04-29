@@ -622,6 +622,32 @@ def test_build_info_generator(given, expected):
         pytest.param(
             {
                 "platforms": {
+                    "ubuntu@26.04:amd64": None,
+                    "cross-resolute": {
+                        "build-on": ["ubuntu@26.04:amd64"],
+                        "build-for": ["ubuntu@26.04:riscv64"],
+                    },
+                },
+            },
+            [
+                project.models.BuildInfo(
+                    platform="ubuntu@26.04:amd64",
+                    build_on="amd64",
+                    build_for="amd64",
+                    base=bases.BaseName(name="ubuntu", version="26.04"),
+                ),
+                project.models.BuildInfo(
+                    platform="cross-resolute",
+                    build_on="amd64",
+                    build_for="riscv64",
+                    base=bases.BaseName(name="ubuntu", version="26.04"),
+                ),
+            ],
+            id="multi-base-ubuntu-26.04",
+        ),
+        pytest.param(
+            {
+                "platforms": {
                     "jammy": {
                         "build-on": ["ubuntu@24.04:amd64"],
                         "build-for": ["ubuntu@24.04:all"],
@@ -662,13 +688,16 @@ def test_build_planner_correct(data, expected):
     assert planner.get_build_plan() == expected
 
 
-@pytest.mark.parametrize("base", ["ubuntu@20.04", "ubuntu@22.04", "ubuntu@24.04"])
+@pytest.mark.parametrize(
+    "base", ["ubuntu@20.04", "ubuntu@22.04", "ubuntu@24.04", "ubuntu@26.04"]
+)
 @pytest.mark.parametrize(
     ("build_base", "build_plan_basename"),
     [
         ("ubuntu@20.04", bases.BaseName("ubuntu", "20.04")),
         ("ubuntu@22.04", bases.BaseName("ubuntu", "22.04")),
         ("ubuntu@24.04", bases.BaseName("ubuntu", "24.04")),
+        ("ubuntu@26.04", bases.BaseName("ubuntu", "26.04")),
         ("almalinux@9", bases.BaseName("almalinux", "9")),
     ],
 )
@@ -1083,6 +1112,39 @@ def test_instantiate_bases_charm_error(
         project.BasesCharm(**values)
 
 
+@pytest.mark.parametrize("plugin_name", ["charm", "reactive"])
+def test_platform_charm_plugin_ubuntu_2604(plugin_name):
+    charm = project.PlatformCharm.model_validate(
+        {
+            "type": "charm",
+            "name": "test-charm",
+            "summary": "A test charm",
+            "description": "A charm for testing ubuntu@26.04 support",
+            "base": "ubuntu@26.04",
+            "platforms": {"amd64": None},
+            "parts": {plugin_name: {"plugin": plugin_name, "source": "."}},
+        }
+    )
+
+    assert charm.base == "ubuntu@26.04"
+    assert charm.parts[plugin_name]["plugin"] == plugin_name
+
+
+def test_platform_charm_reactive_does_not_support_ubuntu_2510():
+    with pytest.raises(pydantic.ValidationError, match="ubuntu@25.10"):
+        project.PlatformCharm.model_validate(
+            {
+                "type": "charm",
+                "name": "test-charm",
+                "summary": "A test charm",
+                "description": "A charm for testing ubuntu@25.10 support",
+                "base": "ubuntu@25.10",
+                "platforms": {"amd64": None},
+                "parts": {"reactive": {"plugin": "reactive", "source": "."}},
+            }
+        )
+
+
 @pytest.mark.parametrize("base", ["ubuntu@18.04", "ubuntu@22.04"])
 def test_devel_bases(monkeypatch, base):
     monkeypatch.setattr(const, "DEVEL_BASE_STRINGS", [base])
@@ -1189,6 +1251,7 @@ def test_read_charm_from_yaml_file_error(filename, errors):
         ({"name": "ubuntu", "channel": "24.04"}, False),
         ({"name": "ubuntu", "channel": "24.10"}, False),
         ({"name": "ubuntu", "channel": "25.04"}, False),
+        ({"name": "ubuntu", "channel": "26.04"}, False),
         ({"name": "centos", "channel": "7"}, True),
         ({"name": "almalinux", "channel": "9"}, True),
     ],

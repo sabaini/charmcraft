@@ -24,6 +24,7 @@ from typing import Literal, cast
 import overrides
 from craft_parts import plugins
 from craft_parts.errors import PluginEnvironmentValidationError
+from craft_parts.packages import platform
 
 VERBOSITY_PARAMS = frozenset({"-v", "--verbose", "--debug", "-l", "--log-level"})
 
@@ -103,6 +104,15 @@ class ReactivePlugin(plugins.Plugin):
 
     def get_build_packages(self) -> set[str]:
         """Return a set of required packages to install in the build environment."""
+        if platform.is_deb_based():
+            return {
+                "git",
+                "virtualenv",
+                "python3-venv",
+                "python3-pip",
+                "python3-setuptools",
+                "python3-wheel",
+            }
         return set()
 
     def get_build_environment(self) -> dict[str, str]:

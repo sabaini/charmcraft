@@ -94,8 +94,25 @@ def plugin(tmp_path, plugin_properties, spec):
     )
 
 
-def test_get_build_package(plugin):
-    assert plugin.get_build_packages() == set()
+def test_get_build_package_deb_based(plugin):
+    with patch("charmcraft.parts.plugins._reactive.platform.is_deb_based") as mock_id:
+        mock_id.return_value = True
+
+        assert plugin.get_build_packages() == {
+            "git",
+            "virtualenv",
+            "python3-venv",
+            "python3-pip",
+            "python3-setuptools",
+            "python3-wheel",
+        }
+
+
+def test_get_build_package_non_deb_based(plugin):
+    with patch("charmcraft.parts.plugins._reactive.platform.is_deb_based") as mock_id:
+        mock_id.return_value = False
+
+        assert plugin.get_build_packages() == set()
 
 
 def test_get_build_snaps(plugin):

@@ -144,8 +144,9 @@ parts:
       /snap/snapcraft/current/libexec/snapcraft/craftctl default
       # Ensure we don't have a dubious ownership error from git with a remote build.
       git config --global --add safe.directory $CRAFT_PART_SRC
-      # Set up the rust compiler
-      rustup default 1.79
+      # Set up the rust compiler. cryptography 47 requires Rust >=1.83 and
+      # maturin's current dependency set requires Rust >=1.88.
+      rustup default 1.88
     override-build: |
       uv venv --relocatable $CRAFT_PART_INSTALL
       uv sync --no-dev --no-editable --no-binary
@@ -157,7 +158,8 @@ parts:
       sed -i 's|#!/bin/sh|#!/snap/charmcraft/current/bin/python3|' $CRAFT_PART_INSTALL/bin/craftctl
 
       version="$(uv pip show charmcraft | grep "Version:" | cut -d' ' -f2)"
-      /snap/snapcraft/current/libexec/snapcraft/craftctl set version="${version}"
+      snap_version="${version:0:32}"
+      /snap/snapcraft/current/libexec/snapcraft/craftctl set version="${snap_version}"
       [ -n "$(echo $version | grep "post")" ] && grade=devel || grade=stable
       /snap/snapcraft/current/libexec/snapcraft/craftctl set grade="${grade}"
 

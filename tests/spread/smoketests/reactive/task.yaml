@@ -5,6 +5,9 @@ priority: 100
 environment:
   CHARM_SNAP_CHANNEL/stable: stable
   CHARM_SNAP_CHANNEL/two: 2.x/stable
+  CHARM_SNAP_CHANNEL/resolute: stable
+  BASE_CHANNEL/stable,two: "22.04"
+  BASE_CHANNEL/resolute: "26.04"
 
 prepare: |
   snap install charm --classic
@@ -20,13 +23,9 @@ prepare: |
 
   cat <<- EOF >> charmcraft.yaml
   type: "charm"
-  bases:
-    - build-on:
-        - name: "ubuntu"
-          channel: "22.04"
-      run-on:
-        - name: "ubuntu"
-          channel: "22.04"
+  base: ubuntu@BASE_CHANNEL
+  platforms:
+    amd64:
   parts:
     charm:
       source: .
@@ -36,6 +35,7 @@ prepare: |
       build-packages: [python3-dev]
   EOF
 
+  sed -i "s|BASE_CHANNEL|$BASE_CHANNEL|" charmcraft.yaml
   sed -i "s|CHARM_SNAP_CHANNEL|$CHARM_SNAP_CHANNEL|" charmcraft.yaml
 
 restore: |
